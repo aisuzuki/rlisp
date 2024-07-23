@@ -1,4 +1,5 @@
 use crate::lisp::SExpr;
+use std::error::Error;
 
 impl From<String> for SExpr {
     fn from(str: String) -> Self {
@@ -32,15 +33,21 @@ impl From<String> for SExpr {
     }
 }
 
-pub fn read(input: &mut String) -> SExpr {
+pub fn read(input: &mut String) -> Result<SExpr, Box<dyn Error>> {
     let mut tokens = tokenise(input);
     println!("tokens {:#?}", tokens);
-    // TODO: if tokens.len() == 0 {  }
+    if tokens.len() == 0 {
+        return Err("to be fixed: empty input - ignored".into());
+    }
 
+    // parse(&mut tokens)
     // debug
-    let exprs = parse(&mut tokens);
-
-    return exprs;
+    if let Ok(parsed) = parse(&mut tokens) {
+        println!("parsed {:#?}", parsed);
+        return Ok(parsed);
+    } else {
+        return Err("parse error".into());
+    }
 }
 
 fn tokenise(input: &String) -> Vec<String> {
@@ -53,23 +60,141 @@ fn tokenise(input: &String) -> Vec<String> {
         .collect()
 }
 
-fn parse<'a>(tokens: &'a mut Vec<String>) -> SExpr {
+// Create direct cons cell
+fn parse<'a>(tokens: &'a mut Vec<String>) -> Result<SExpr, Box<dyn Error>> {
     let token = tokens.remove(0);
     // todo support nil "()""
+    if token == ")" {
+        return Err("wrong close \")\"".into()); // use fmt
+    }
+
     if token == "(" {
         // list
         let mut stack = Vec::new();
         while tokens[0] != ")" {
-            stack.push(parse(tokens));
+            match parse(tokens) {
+                Ok(t) => {
+                    stack.push(t);
+                }
+                Err(e) => {
+                    return Err(e.into());
+                }
+            }
         }
         tokens.remove(0);
 
         println!("list process: {:#?}", tokens);
 
-        SExpr::List(stack)
-    } else if token == ")" {
-        panic!(">>> token error"); // todo error handling
+        Ok(SExpr::List(stack))
     } else {
-        SExpr::from(token.to_string())
+        Ok(SExpr::from(token.to_string()))
+    }
+}
+
+// it's kinda funny to write test code within a program file
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_string() {
+        let mut input = "\"stringdata\"".to_string();
+        let result = read(&mut input);
+        assert!(result.is_ok());
+
+        if let Ok(s) = result {
+            match s {
+                SExpr::Str(str) => {
+                    assert_eq!(str, input.replace("\"", ""));
+                }
+                _ => panic!("result should be string"),
+            }
+        }
+    }
+
+    #[test]
+    fn read_symbol() {
+        let mut input = "symbol".to_string();
+        let result = read(&mut input);
+        assert!(result.is_ok());
+
+        if let Ok(s) = result {
+            match s {
+                SExpr::Symbol(symbol) => {
+                    assert_eq!(symbol, input);
+                }
+                _ => panic!("result should be symbol"),
+            }
+        }
+    }
+
+    #[test]
+    fn read_integer() {
+        let mut input = "100".to_string();
+        let result = read(&mut input);
+        assert!(result.is_ok());
+
+        if let Ok(s) = result {
+            match s {
+                SExpr::Num(n) => {
+                    assert_eq!(n, 100.0);
+                }
+                _ => panic!("result should be number"),
+            }
+        }
+    }
+
+    #[test]
+    fn read_bool() {
+        // test true and false
+        for input in ["true".to_string(), "false".to_string()].iter() {
+            let result = read(&mut input.clone());
+            assert!(result.is_ok());
+
+            if let Ok(s) = result {
+                match s {
+                    SExpr::Bool(b) => {
+                        assert_eq!(b, input.parse::<bool>().unwrap());
+                    }
+                    _ => panic!("result should be bool"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn read_nil() {
+        let mut input = "nil".to_string();
+        let result = read(&mut input);
+        assert!(result.is_ok());
+
+        if let Ok(s) = result {
+            match s {
+                SExpr::Nil() => {
+                    assert!(true);
+                }
+                _ => panic!("result should be nil"),
+            }
+        }
+    }
+
+    #[test]
+    fn read_list() {
+        let mut input = "(+ 1 2)".to_string();
+        let result = read(&mut input);
+        assert!(result.is_ok());
+
+        if let Ok(s) = result {
+            match s {
+                SExpr::List(l) => {
+                    assert_eq!(l.len(), 3);
+                    assert!(matches!(l[0], SExpr::Symbol(ref sym) if sym == "+"));
+                    assert!(matches!(l[1], SExpr::Num(n) if n == 1.0));
+                    assert!(matches!(l[2], SExpr::Num(n) if n == 2.0));
+                }
+                _ => panic!("result should be list"),
+            }
+        }
     }
 }

@@ -1,25 +1,39 @@
 #[derive(Debug)]
 pub enum SExpr {
+    // TODO float
     Num(f64),
-    Bool(bool),
+    Bool(bool),         // delete -> nil or t
     Symbol(String),
     Str(String),
     List(Vec<SExpr>),
     Nil(),
 }
 
-pub enum LispExpr {
-    // todo
+// parse string into cons cell directry in read
+pub enum Type {
+    // TODO float
+    Num(f64),
+    Str(String),
+    Symbol(String),     // symbol table address
+    Cons(),
+    Nil(),
+    T(),
 }
 
-pub struct ConsCell<T> {
-    pub car: T,
-    pub cdr: Option<Box<ConsCell<T>>>,
+// TODO make Nil as single instance
+
+pub struct LispExpr {
 }
 
-impl<T> ConsCell<T> {
-    pub fn new(car: T, cdr: Option<Box<ConsCell<T>>>) -> Self {
-        ConsCell { car, cdr }
+pub struct ConsCell {
+    pub t: Type,
+    pub car: Box<ConsCell>,     // allocate car in memory table
+    pub cdr: Box<ConsCell>,     // allocate cdr in memory table
+}
+
+impl ConsCell {
+    pub fn new(t: Type, car: ConsCell, cdr: ConsCell) -> Self {
+        ConsCell {t, car: Box::new(car), cdr: Box::new(cdr) }       // allocate car/cdr in memory table
     }
 }
 

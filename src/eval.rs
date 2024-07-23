@@ -1,5 +1,10 @@
 use crate::lisp::ConsCell;
 use crate::lisp::SExpr;
+use std::error::Error;
 
-pub fn eval(sexpr: SExpr) { // return -> ConsCell {
+//  SExpr is tmp
+// pub fn eval(sexpr: SExpr) -> Result<ConsCell, Box<dyn Error>> {
+pub fn eval(sexpr: SExpr) {
+    // return -> ConsCell {
+    // return Ok(ConsCell::new());
 }
